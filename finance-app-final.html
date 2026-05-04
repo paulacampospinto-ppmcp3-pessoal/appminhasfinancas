@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Agente Financeiro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #CBD5E1; font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes slideUpFast { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes screenFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .screen-fade { animation: screenFade 180ms ease forwards; }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type=number] { -moz-appearance: textfield; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- ─────────────────────────────────────────────
+     1. DESIGN SYSTEM
+───────────────────────────────────────────── -->
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, createContext, useContext } = React;
+
+const T = {
+  bg:'#F8FAFC', bgWhite:'#FFFFFF', card:'#FFFFFF', cardSubtle:'#F1F5F9',
+  navy:'#0F172A', muted:'#475569', faint:'#94A3B8',
+  border:'#E2E8F0', divider:'#E2E8F0',
+  blue:'#4F46E5', blueHover:'#4338CA', blueBg:'#EEF2FF',
+  green:'#16A34A', greenBg:'#DCFCE7',
+  amber:'#D97706', amberBg:'#FEF3C7',
+  red:'#DC2626', redBg:'#FEE2E2',
+  shadow:'0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)',
+  shadowMd:'0 4px 16px rgba(15,23,42,0.08), 0 2px 4px rgba(15,23,42,0.04)',
+};
+
+const PATHS = {
+  dashboard:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
+  card:"M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z",
+  calendar:"M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
+  chart:"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+  plus:"M12 4v16m8-8H4",
+  eye:"M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z",
+  eyeOff:"M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21",
+  check:"M5 13l4 4L19 7",
+  chevronRight:"M9 5l7 7-7 7",
+  chevronLeft:"M15 19l-7-7 7-7",
+  clock:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+  alert:"M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
+  x:"M6 18L18 6M6 6l12 12",
+  trash:"M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
+  pencil:"M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
+  settings:"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z",
+  download:"M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4",
+  upload:"M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12",
+  home:"M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
+};
+
+const Icon = ({ name, size=20, color='currentColor', strokeWidth=1.75 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+    <path d={PATHS[name]||''} />
+  </svg>
+);
+
+const StatusBadge = ({ status }) => {
+  const cfg = {
+    paid:   { bg:T.greenBg, color:T.green, label:'Pago'     },
+    pending:{ bg:T.amberBg, color:T.amber, label:'Pendente' },
+    overdue:{ bg:T.redBg,   color:T.red,   label:'Vencido'  },
+  }[status]||{ bg:T.cardSubtle, color:T.muted, label:status };
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:3, fontSize:11, fontWeight:600, letterSpacing:'0.02em', padding:'2px 7px', borderRadius:9999, background:cfg.bg, color:cfg.color }}>
+      {status==='paid'    && <Icon name="check" size={9} color={cfg.color} strokeWidth={3}/>}
+      {status==='pending' && <Icon name="clock" size={9} color={cfg.color} strokeWidth={2.5}/>}
+      {status==='overdue' && <Icon name="alert" size={9} color={cfg.color} strokeWidth={2.5}/>}
+      {cfg.label}
+    </span>
+  );
+};
+
+const ProgressBar = ({ value, max, color=T.blue, height=5, bgColor=T.border }) => (
+  <div style={{ height, background:bgColor, borderRadius:9999, overflow:'hidden' }}>
+    <div style={{ height:'100%', width:`${Math.min(100,(value/max)*100)}%`, background:color, borderRadius:9999, transition:'width 600ms cubic-bezier(.4,0,.2,1)' }}/>
+  </div>
+);
+
+const SCard = ({ children, style, onClick, hoverable }) => {
+  const [hov, setHov] = useState(false);
+  return (
+    <div onClick={onClick}
+      onMouseEnter={()=>hoverable&&setHov(true)} onMouseLeave={()=>hoverable&&setHov(false)}
+      style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:12,
+        boxShadow:hov?T.shadowMd:T.shadow, transition:'box-shadow 150ms,transform 150ms',
+        transform:hov&&onClick?'translateY(-1px)':'none', cursor:onClick?'pointer':'default', ...style }}>
+      {children}
+    </div>
+  );
+};
+
+const SectionLabel = ({ children, action, onAction }) => (
+  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+    <span style={{ fontSize:12, fontWeight:600, letterSpacing:'0.04em', textTransform:'uppercase', color:T.muted }}>{children}</span>
+    {action && <button onClick={onAction} style={{ fontSize:13, color:T.blue, background:'none', border:'none', cursor:'pointer', fontWeight:500 }}>{action}</button>}
+  </div>
+);
+
+const Divider = () => <div style={{ height:1, background:T.divider }}/>;
+
+const BottomSheet = ({ open, onClose, title, children }) => {
+  useEffect(()=>{ document.body.style.overflow=open?'hidden':''; return()=>{ document.body.style.overflow=''; }; },[open]);
+  if (!open) return null;
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
+      <div onClick={onClose} style={{ position:'absolute', inset:0, background:'rgba(15,23,42,0.45)', backdropFilter:'blur(4px)' }}/>
+      <div style={{ position:'relative', width:'100%', maxWidth:430, maxHeight:'88vh', background:T.bgWhite, borderRadius:'20px 20px 0 0', boxShadow:'0 -8px 40px rgba(15,23,42,0.15)', display:'flex', flexDirection:'column', animation:'slideUp 260ms cubic-bezier(0.32,0.72,0,1)' }}>
+        <div style={{ display:'flex', justifyContent:'center', paddingTop:12 }}>
+          <div style={{ width:36, height:4, borderRadius:9999, background:T.border }}/>
+        </div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 20px 0' }}>
+          <span style={{ fontSize:17, fontWeight:700, color:T.navy }}>{title}</span>
+          <button onClick={onClose} style={{ background:T.cardSubtle, border:'none', borderRadius:9999, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+            <Icon name="x" size={13} color={T.muted} strokeWidth={2.5}/>
+          </button>
+        </div>
+        <div style={{ flex:1, overflowY:'auto', padding:'16px 20px 36px' }}>{children}</div>
+      </div>
+    </div>
+  );
+};
+
+const FormField = ({ label, children }) => (
+  <div style={{ marginBottom:14 }}>
+    <label style={{ display:'block', fontSize:11, fontWeight:600, color:T.muted, marginBottom:6, letterSpacing:'0.04em', textTransform:'uppercase' }}>{label}</label>
+    {children}
+  </div>
+);
+
+const Input = ({ value, onChange, placeholder, type='text', ...rest }) => (
+  <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+    style={{ width:'100%', padding:'11px 14px', fontSize:15, background:T.bgWhite, border:`1.5px solid ${T.border}`, borderRadius:10, color:T.navy, outline:'none', fontVariantNumeric:'tabular-nums', fontFamily:"'Inter',sans-serif" }}
+    onFocus={e=>{ e.target.style.borderColor=T.blue; e.target.style.boxShadow=`0 0 0 3px ${T.blueBg}`; }}
+    onBlur={e=>{ e.target.style.borderColor=T.border; e.target.style.boxShadow='none'; }}
+    {...rest}/>
+);
+
+const Sel = ({ value, onChange, children }) => (
+  <select value={value} onChange={onChange}
+    style={{ width:'100%', padding:'11px 14px', fontSize:15, background:T.bgWhite, border:`1.5px solid ${T.border}`, borderRadius:10, color:T.navy, outline:'none', fontFamily:"'Inter',sans-serif" }}>
+    {children}
+  </select>
+);
+
+const PrimaryBtn = ({ children, onClick, disabled, color, style:s }) => (
+  <button onClick={onClick} disabled={disabled} style={{ width:'100%', padding:14, fontSize:14, fontWeight:600, background:disabled?T.border:(color||T.blue), color:disabled?T.faint:'#fff', border:'none', borderRadius:12, cursor:disabled?'not-allowed':'pointer', transition:'all 150ms', ...s }}>{children}</button>
+);
+
+const ActionBtn = ({ children, onClick, color=T.blue }) => (
+  <button onClick={onClick} style={{ padding:'4px 10px', borderRadius:8, fontSize:11, fontWeight:600, background:color+'14', color, border:`1px solid ${color}28`, cursor:'pointer' }}>{children}</button>
+);
+
+const CategoryDot = ({ color=T.muted, size=8 }) => (
+  <div style={{ width:size, height:size, borderRadius:'50%', background:color, flexShrink:0 }}/>
+);
+
+const CreditCardVisual = ({ card, compact=false }) => (
+  <div style={{ background:card.bgGrad, borderRadius:compact?10:16, padding:compact?'10px 14px':'18px 20px', height:compact?72:116, position:'relative', overflow:'hidden', color:'#fff', userSelect:'none', boxShadow:'0 8px 28px rgba(0,0,0,0.24)' }}>
+    <div style={{ position:'absolute', top:-24, right:-24, width:110, height:110, borderRadius:'50%', background:'rgba(255,255,255,0.07)' }}/>
+    <div style={{ position:'relative', zIndex:1, height:'100%', display:'flex', flexDirection:'column', justifyContent:'space-between' }}>
+      <span style={{ fontSize:compact?13:15, fontWeight:700 }}>{card.name}</span>
+      {!compact
+        ? <div>
+            <div style={{ fontSize:11, opacity:0.6, marginBottom:2, letterSpacing:'0.14em', fontVariantNumeric:'tabular-nums' }}>•••• •••• ••••</div>
+            <div style={{ fontSize:15, fontWeight:600, letterSpacing:'0.18em', fontVariantNumeric:'tabular-nums' }}>{card.lastFour}</div>
+          </div>
+        : <div style={{ fontSize:11, opacity:0.65, letterSpacing:'0.12em' }}>•••• {card.lastFour}</div>
+      }
+    </div>
+  </div>
+);
+
+const FilterTabs = ({ options, active, onChange }) => (
+  <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap' }}>
+    {options.map(opt => (
+      <button key={opt.value} onClick={()=>onChange(opt.value)} style={{ padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:600, background:active===opt.value?T.blueBg:'transparent', color:active===opt.value?T.blue:T.muted, border:`1.5px solid ${active===opt.value?T.blue+'60':T.border}`, cursor:'pointer', transition:'all 150ms' }}>{opt.label}</button>
+    ))}
+  </div>
+);
+
+const EmptyState = ({ icon, message }) => (
+  <div style={{ textAlign:'center', padding:'40px 20px', color:T.faint }}>
+    <div style={{ fontSize:28, marginBottom:8 }}>{icon}</div>
+    <div style={{ fontSize:13 }}>{message}</div>
+  </div>
+);
+
+const MONTH_NAMES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MONTH_SHORT    = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+const MonthNav = ({ viewMonth, onChange, style:s }) => {
+  const prev = () => {
+    const { month, year } = viewMonth;
+    onChange(month===0 ? {month:11,year:year-1} : {month:month-1,year});
+  };
+  const next = () => {
+    const { month, year } = viewMonth;
+    onChange(month===11 ? {month:0,year:year+1} : {month:month+1,year});
+  };
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:8, ...s }}>
+      <button onClick={prev} style={{ width:32, height:32, borderRadius:9999, background:T.cardSubtle, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <Icon name="chevronLeft" size={15} color={T.muted}/>
+      </button>
+      <span style={{ fontSize:15, fontWeight:700, color:T.navy, minWidth:140, textAlign:'center' }}>
+        {MONTH_NAMES_PT[viewMonth.month]} {viewMonth.year}
+      </span>
+      <button onClick={next} style={{ width:32, height:32, borderRadius:9999, background:T.cardSubtle, border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <Icon name="chevronRight" size={15} color={T.muted}/>
+      </button>
+    </div>
+  );
+};
+
+Object.assign(window,{ T, Icon, StatusBadge, ProgressBar, SCard, SectionLabel, Divider, BottomSheet, FormField, Input, Sel, PrimaryBtn, ActionBtn, CategoryDot, CreditCardVisual, FilterTabs, EmptyState, MonthNav, MONTH_NAMES_PT, MONTH_SHORT });
+</script>
+
+<!-- ─────────────────────────────────────────────
+     2. DATA LAYER
+───────────────────────────────────────────── -->
+<script type="text/babel">
+const load = (k,fb) => { try { const v=localStorage.getItem(k); return v?JSON.parse(v):fb; } catch { return fb; } };
+const save = (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch {} };
+
+const _NOW = new Date();
+const CURRENT_DAY   = _NOW.getDate();
+const CURRENT_MONTH = _NOW.getMonth();
+const CURRENT_YEAR  = _NOW.getFullYear();
+
+const INITIAL_CARDS = [
+  { id:'c1', name:'Nubank', lastFour:'4821', color:'#820AD1', bgGrad:'linear-gradient(135deg,#820AD1 0%,#5B0A91 100%)', limit:8000, dueDay:10, closeDay:3,
+    purchases:[
+      {id:'p1',desc:'Netflix',    category:'Streaming',   amount:39.90,  date:'2026-04-02',recurring:true },
+      {id:'p2',desc:'Supermercado',category:'Alimentação',amount:387.50, date:'2026-04-15',recurring:false},
+      {id:'p3',desc:'iFood',      category:'Delivery',    amount:89.90,  date:'2026-04-18',recurring:false},
+      {id:'p4',desc:'Farmácia',   category:'Saúde',       amount:145.00, date:'2026-04-20',recurring:false},
+      {id:'p5',desc:'Combustível',category:'Transporte',  amount:200.00, date:'2026-04-22',recurring:false},
+    ]},
+  { id:'c2', name:'Itaú Platinum', lastFour:'7293', color:'#E05A00', bgGrad:'linear-gradient(135deg,#E05A00 0%,#B04000 100%)', limit:15000, dueDay:15, closeDay:8,
+    purchases:[
+      {id:'p6',desc:'Amazon',    category:'Compras',     amount:299.90,date:'2026-04-10',recurring:false},
+      {id:'p7',desc:'Spotify',   category:'Streaming',   amount:21.90, date:'2026-04-01',recurring:true },
+      {id:'p8',desc:'Restaurante',category:'Alimentação',amount:180.00,date:'2026-04-19',recurring:false},
+      {id:'p9',desc:'Uber',      category:'Transporte',  amount:95.40, date:'2026-04-23',recurring:false},
+    ]},
+];
+
+const INITIAL_BILLS = [
+  {id:'b1',name:'Internet',   provider:'Vivo Fibra',amount:120,dueDay:10,status:'paid',   method:'Débito automático',icon:'📡'},
+  {id:'b2',name:'Celular',    provider:'Tim',       amount:80, dueDay:15,status:'pending',method:'Débito automático',icon:'📱'},
+  {id:'b3',name:'Energia',    provider:'Enel',      amount:180,dueDay:20,status:'pending',method:'Boleto',           icon:'⚡'},
+  {id:'b4',name:'Gás',        provider:'Comgás',    amount:85, dueDay:25,status:'pending',method:'Boleto',           icon:'🔥'},
+  {id:'b5',name:'Condomínio', provider:'',          amount:650,dueDay:5, status:'paid',   method:'Boleto',           icon:'🏢'},
+  {id:'b6',name:'IPTU',       provider:'Prefeitura',amount:145,dueDay:28,status:'overdue',method:'Boleto',           icon:'🏛'},
+];
+
+const INITIAL_RECURRING = [
+  {id:'r1',name:'Dog Walker',        person:'Maria',        amount:600,frequency:'Mensal', dueDay:1, status:'paid',   method:'Pix',category:'Pet'   },
+  {id:'r2',name:'Personal Trainer',  person:'João',         amount:480,frequency:'Mensal', dueDay:1, status:'paid',   method:'Pix',category:'Saúde' },
+  {id:'r3',name:'Drenagem Linfática',person:'Clínica Bella',amount:300,frequency:'Mensal', dueDay:15,status:'pending',method:'Pix',category:'Saúde' },
+  {id:'r4',name:'Psicóloga',         person:'Dra. Ana',     amount:600,frequency:'Semanal',dueDay:5, status:'pending',method:'Pix',category:'Saúde' },
+  {id:'r5',name:'Beach Tennis',      person:'Academia Mar', amount:350,frequency:'Mensal', dueDay:1, status:'paid',   method:'Pix',category:'Esporte'},
+];
+
+const CATEGORY_COLORS = {
+  Streaming:'#0057D9',Alimentação:'#1A7C47',Delivery:'#C8841A',
+  Saúde:'#7C3AED',Transporte:'#0891B2',Compras:'#DB2777',
+  Moradia:'#059669',Pet:'#D97706',Esporte:'#2563EB',
+  Beleza:'#BE185D',Lazer:'#059669',Educação:'#7C2D12',Outros:'#6B7280',
+};
+
+const FinanceContext = createContext(null);
+
+const FinanceProvider = ({ children }) => {
+  const [cards,     setCards]     = useState(()=>load('fa_cards',    INITIAL_CARDS));
+  const [bills,     setBills]     = useState(()=>load('fa_bills',    INITIAL_BILLS));
+  const [recurring, setRecurring] = useState(()=>load('fa_rec',      INITIAL_RECURRING));
+  const [budget,    setBudget]    = useState(()=>load('fa_budget',   10000));
+  const [income,    setIncome]    = useState(()=>load('fa_income',   0));
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [toast,     setToast]     = useState(null);
+  const toastRef = useRef(null);
+
+  useEffect(()=>save('fa_cards',    cards),     [cards]);
+  useEffect(()=>save('fa_bills',    bills),     [bills]);
+  useEffect(()=>save('fa_rec',      recurring), [recurring]);
+  useEffect(()=>save('fa_budget',   budget),    [budget]);
+  useEffect(()=>save('fa_income',   income),    [income]);
+
+  const showToast = (message, undoFn=null) => {
+    if (toastRef.current) clearTimeout(toastRef.current);
+    setToast({ message, undoFn });
+    toastRef.current = setTimeout(()=>setToast(null), 4200);
+  };
+  const dismissToast = () => { if(toastRef.current) clearTimeout(toastRef.current); setToast(null); };
+
+  const fmt = v => privacyMode ? 'R$ ●●●' : new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+
+  // ── Totals ──────────────────────────────────────────────────
+  const cardTotal      = cards.reduce((s,c)=>s+c.purchases.reduce((ss,p)=>ss+p.amount,0),0);
+  const billTotal      = bills.reduce((s,b)=>s+b.amount,0);
+  const recurringTotal = recurring.reduce((s,r)=>s+r.amount,0);
+  const totalExpenses  = cardTotal+billTotal+recurringTotal;
+  const paidTotal      = cardTotal
+    + bills.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0)
+    + recurring.filter(r=>r.status==='paid').reduce((s,r)=>s+r.amount,0);
+  const pendingTotal   = totalExpenses - paidTotal;
+
+  // ── CRUD ─────────────────────────────────────────────────────
+  const markBillPaid      = id => setBills(p=>p.map(b=>b.id===id?{...b,status:'paid'}:b));
+  const markRecurringPaid = id => setRecurring(p=>p.map(r=>r.id===id?{...r,status:'paid'}:r));
+  const addBill           = b => setBills(p=>[...p,{...b,id:'b'+Date.now(),status:'pending'}]);
+  const addRecurring      = r => setRecurring(p=>[...p,{...r,id:'r'+Date.now(),status:'pending'}]);
+  const addCard           = c => setCards(p=>[...p,{...c,id:'c'+Date.now(),purchases:[],bgGrad:`linear-gradient(135deg,${c.color} 0%,#333 100%)`}]);
+  const addPurchase       = (cid,p) => setCards(prev=>prev.map(c=>c.id===cid?{...c,purchases:[...c.purchases,{...p,id:'p'+Date.now()}]}:c));
+  const editBill          = (id,u) => setBills(p=>p.map(b=>b.id===id?{...b,...u}:b));
+  const editRecurring     = (id,u) => setRecurring(p=>p.map(r=>r.id===id?{...r,...u}:r));
+  const editCard          = (id,u) => setCards(p=>p.map(c=>c.id===id?{...c,...u,bgGrad:`linear-gradient(135deg,${u.color||c.color} 0%,#333 100%)`}:c));
+  const editPurchase      = (cid,pid,u) => setCards(prev=>prev.map(c=>c.id===cid?{...c,purchases:c.purchases.map(p=>p.id===pid?{...p,...u}:p)}:c));
+
+  const deleteBill = id => {
+    const item = bills.find(b=>b.id===id);
+    setBills(p=>p.filter(b=>b.id!==id));
+    showToast(`"${item.name}" removida`, ()=>setBills(p=>[...p,item]));
+  };
+  const deleteRecurring = id => {
+    const item = recurring.find(r=>r.id===id);
+    setRecurring(p=>p.filter(r=>r.id!==id));
+    showToast(`"${item.name}" removido`, ()=>setRecurring(p=>[...p,item]));
+  };
+  const deletePurchase = (cid,pid) => {
+    const card = cards.find(c=>c.id===cid);
+    const purchase = card?.purchases.find(p=>p.id===pid);
+    setCards(prev=>prev.map(c=>c.id===cid?{...c,purchases:c.purchases.filter(p=>p.id!==pid)}:c));
+    if (purchase) showToast(`"${purchase.desc}" removido`, ()=>setCards(prev=>prev.map(c=>c.id===cid?{...c,purchases:[...c.purchases,purchase]}:c)));
+  };
+
+  // ── Export / Import ──────────────────────────────────────────
+  const exportData = () => {
+    const data = { cards, bills, recurring, budget, income, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `financeiro-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Backup exportado com sucesso!');
+  };
+  const importData = file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const d = JSON.parse(e.target.result);
+        if (d.cards)     setCards(d.cards);
+        if (d.bills)     setBills(d.bills);
+        if (d.recurring) setRecurring(d.recurring);
+        if (d.budget)    setBudget(d.budget);
+        if (d.income)    setIncome(d.income);
+        showToast('Dados importados!');
+      } catch { showToast('Arquivo inválido.'); }
+    };
+    reader.readAsText(file);
+  };
+
+  // ── Helpers ──────────────────────────────────────────────────
+  const categoryBreakdown = () => {
+    const map = {};
+    cards.forEach(c=>c.purchases.forEach(p=>{ map[p.category]=(map[p.category]||0)+p.amount; }));
+    bills.forEach(b=>{ map[b.name]=(map[b.name]||0)+b.amount; });
+    recurring.forEach(r=>{ map[r.category]=(map[r.category]||0)+r.amount; });
+    return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([name,amount])=>({ name, amount, color:CATEGORY_COLORS[name]||'#6B7280' }));
+  };
+
+  const resetData = () => { setCards(INITIAL_CARDS); setBills(INITIAL_BILLS); setRecurring(INITIAL_RECURRING); setBudget(10000); setIncome(0); };
+
+  return (
+    <FinanceContext.Provider value={{
+      cards, bills, recurring, budget, income, privacyMode, toast,
+      setPrivacyMode, setBudget, setIncome,
+      fmt, cardTotal, billTotal, recurringTotal, totalExpenses, paidTotal, pendingTotal,
+      markBillPaid, markRecurringPaid,
+      addBill, addRecurring, addCard, addPurchase,
+      editBill, editRecurring, editCard, editPurchase,
+      deleteBill, deleteRecurring, deletePurchase,
+      exportData, importData, resetData,
+      categoryBreakdown, CATEGORY_COLORS,
+      showToast, dismissToast,
+      CURRENT_DAY, CURRENT_MONTH, CURRENT_YEAR,
+    }}>
+      {children}
+    </FinanceContext.Provider>
+  );
+};
+
+const useFinance = () => useContext(FinanceContext);
+Object.assign(window,{ FinanceProvider, useFinance, CATEGORY_COLORS, CURRENT_DAY, CURRENT_MONTH, CURRENT_YEAR });
+</script>
+
+<!-- ─────────────────────────────────────────────
+     3. DASHBOARD
+───────────────────────────────────────────── -->
+<script type="text/babel">
+const SpendingChart = ({ viewMonth, cards, bills, recurring, budget }) => {
+  const { month, year } = viewMonth;
+  const NOW = new Date();
+  const isCurrent = month===NOW.getMonth() && year===NOW.getFullYear();
+  const isPast    = year<NOW.getFullYear() || (year===NOW.getFullYear() && month<NOW.getMonth());
+  const DAYS = new Date(year,month+1,0).getDate();
+  const TODAY = isCurrent ? NOW.getDate() : isPast ? DAYS : 0;
+
+  const points = React.useMemo(()=>{
+    if (TODAY===0) return [];
+    const ev = {};
+    cards.forEach(c=>c.purchases.forEach(p=>{
+      const d=new Date(p.date+'T12:00:00');
+      if(d.getMonth()===month && d.getFullYear()===year){ const day=d.getDate(); ev[day]=(ev[day]||0)+p.amount; }
+    }));
+    bills.forEach(b=>{
+      if((isPast||b.status==='paid') && b.dueDay<=TODAY) ev[b.dueDay]=(ev[b.dueDay]||0)+b.amount;
+    });
+    recurring.forEach(r=>{
+      if((isPast||r.status==='paid') && r.dueDay<=TODAY) ev[r.dueDay]=(ev[r.dueDay]||0)+r.amount;
+    });
+    let cum=0; const pts=[];
+    for(let d=1;d<=TODAY;d++){ cum+=ev[d]||0; pts.push({day:d,val:cum}); }
+    return pts;
+  },[cards,bills,recurring,month,year,TODAY,isPast]);
+
+  const W=320, H=88, PAD={l:2,r:2,t:8,b:16};
+  const maxVal = Math.max(budget*1.1,(points[points.length-1]?.val||1)*1.1);
+  const xS = d=>PAD.l+((d-1)/(DAYS-1))*(W-PAD.l-PAD.r);
+  const yS = v=>H-PAD.b-((v/maxVal)*(H-PAD.t-PAD.b));
+  const linePath = points.map((p,i)=>`${i===0?'M':'L'}${xS(p.day).toFixed(1)},${yS(p.val).toFixed(1)}`).join(' ');
+  const last = points[points.length-1];
+  const budgetY = yS(budget);
+  const ticks = [1,Math.round(DAYS*.25),Math.round(DAYS*.5),Math.round(DAYS*.75),DAYS];
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow:'visible', display:'block' }}>
+      <defs>
+        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4F46E5" stopOpacity="0.14"/>
+          <stop offset="100%" stopColor="#4F46E5" stopOpacity="0.01"/>
+        </linearGradient>
+      </defs>
+      {budget>0 && <>
+        <line x1={PAD.l} y1={budgetY} x2={W-PAD.r} y2={budgetY} stroke="#E2E1DC" strokeWidth={1} strokeDasharray="4 3"/>
+        <text x={W-PAD.r-2} y={budgetY-3} textAnchor="end" fontSize={8} fill="#A0A0AC" fontFamily="'Inter',sans-serif">orçamento</text>
+      </>}
+      {points.length>1 && <>
+        <path d={linePath+` L${xS(last.day).toFixed(1)},${(H-PAD.b).toFixed(1)} L${xS(1).toFixed(1)},${(H-PAD.b).toFixed(1)} Z`} fill="url(#cg)"/>
+        <path d={linePath} fill="none" stroke="#4F46E5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+      </>}
+      {last && <>
+        <circle cx={xS(last.day)} cy={yS(last.val)} r={6} fill="#4F46E5" fillOpacity={0.18}/>
+        <circle cx={xS(last.day)} cy={yS(last.val)} r={3.5} fill="#4F46E5"/>
+      </>}
+      {ticks.map(d=>(
+        <text key={d} x={xS(d)} y={H-2} textAnchor="middle" fontSize={8} fill="#A0A0AC" fontFamily="'Inter',sans-serif">
+          {String(d).padStart(2,'0')}
+        </text>
+      ))}
+    </svg>
+  );
+};
+
+const DashboardScreen = ({ onNavigate }) => {
+  const { cards, bills, recurring, budget, income, privacyMode, setPrivacyMode, fmt,
+          markBillPaid, markRecurringPaid, setBudget, setIncome,
+          exportData, importData, resetData, showToast,
+          CURRENT_MONTH:CM, CURRENT_YEAR:CY } = useFinance();
+
+  const [viewMonth,    setViewMonth]    = React.useState({ month:CM, year:CY });
+  const [dueFilter,    setDueFilter]    = React.useState('all');
+  const [showSettings, setShowSettings] = React.useState(false);
+  const [settingBudget,setSettingBudget]= React.useState('');
+  const [settingIncome,setSettingIncome]= React.useState('');
+  const importRef = React.useRef(null);
+
+  const { month:vm, year:vy } = viewMonth;
+  const isCurrent = vm===CM && vy===CY;
+  const isPast    = vy<CY || (vy===CY && vm<CM);
+
+  // ── Filtered data for selected month ────────────────────────
+  const mCards = cards.map(c=>({ ...c, purchases:c.purchases.filter(p=>{ const d=new Date(p.date+'T12:00:00'); return d.getMonth()===vm && d.getFullYear()===vy; }) }));
+  const mBills = bills.map(b=>({ ...b, status:isCurrent?b.status:isPast?'paid':'pending' }));
+  const mRec   = recurring.map(r=>({ ...r, status:isCurrent?r.status:isPast?'paid':'pending' }));
+
+  const mCardTotal = mCards.reduce((s,c)=>s+c.purchases.reduce((ss,p)=>ss+p.amount,0),0);
+  const mBillTotal = mBills.reduce((s,b)=>s+b.amount,0);
+  const mRecTotal  = mRec.reduce((s,r)=>s+r.amount,0);
+  const mTotal     = mCardTotal+mBillTotal+mRecTotal;
+  const mPaid      = mCardTotal
+    + mBills.filter(b=>b.status==='paid').reduce((s,b)=>s+b.amount,0)
+    + mRec.filter(r=>r.status==='paid').reduce((s,r)=>s+r.amount,0);
+  const mPending   = mTotal - mPaid;
+
+  const budgetPct   = Math.min(100,(mTotal/budget)*100);
+  const budgetColor = budgetPct>90?T.red:budgetPct>70?T.amber:T.blue;
+  const incomeRatio = income>0 ? Math.round((mTotal/income)*100) : null;
+
+  // ── All dues for this month ──────────────────────────────────
+  const allDues = [
+    ...mBills.map(b=>({ name:b.name, day:b.dueDay, type:'bill', amount:b.amount, status:b.status, id:b.id, icon:b.icon })),
+    ...mRec.map(r=>({ name:r.name, day:r.dueDay, type:'rec', amount:r.amount, status:r.status, id:r.id })),
+    ...mCards.map(c=>({ name:`Fatura ${c.name}`, day:c.dueDay, type:'card', amount:c.purchases.reduce((s,p)=>s+p.amount,0), status:'pending', id:c.id })),
+  ].sort((a,b)=>a.day-b.day);
+
+  const filteredDues = dueFilter==='all' ? allDues : allDues.filter(d=>d.status===dueFilter);
+
+  // ── Due soon (for current month highlight) ───────────────────
+  const dueSoon = isCurrent ? allDues.filter(d=>d.status!=='paid' && d.day>=CM && d.day<=CM+7) : [];
+
+  const saveSettings = () => {
+    if (settingBudget) setBudget(parseFloat(settingBudget)||budget);
+    if (settingIncome) setIncome(parseFloat(settingIncome)||income);
+    setSettingBudget(''); setSettingIncome('');
+    setShowSettings(false);
+  };
+
+  const dueFilterOptions = [
+    {value:'all',label:'Todos'},{value:'pending',label:'Pendente'},
+    {value:'paid',label:'Pago'},{value:'overdue',label:'Vencido'},
+  ];
+
+  return (
+    <div style={{ padding:'16px 16px 0', overflowY:'auto', height:'100%' }}>
+
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+        <MonthNav viewMonth={viewMonth} onChange={setViewMonth}/>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={()=>setPrivacyMode(p=>!p)} style={{ width:36, height:36, borderRadius:'50%', background:T.card, border:`1px solid ${T.border}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:T.shadow }}>
+            <Icon name={privacyMode?'eyeOff':'eye'} size={16} color={T.muted}/>
+          </button>
+          <button onClick={()=>setShowSettings(true)} style={{ width:36, height:36, borderRadius:'50%', background:T.card, border:`1px solid ${T.border}`, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:T.shadow }}>
+            <Icon name="settings" size={16} color={T.muted}/>
+          </button>
+        </div>
+      </div>
+
+      {/* Spending card */}
+      <SCard style={{ padding:20, marginBottom:12 }}>
+        <div style={{ fontSize:10, color:T.muted, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:6 }}>Gastos no mês</div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:14 }}>
+          <div>
+            <div style={{ fontSize:34, fontWeight:700, color:T.navy, letterSpacing:'-0.01em', lineHeight:1, fontVariantNumeric:'tabular-nums' }}>
+              {privacyMode ? 'R$ ●●●●' : new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(mTotal)}
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:5 }}>
+              <div style={{ width:8, height:8, borderRadius:'50%', background:budgetColor }}/>
+              <span style={{ fontSize:12, color:T.muted }}>{Math.round(budgetPct)}% do orçamento{incomeRatio ? ` · ${incomeRatio}% da renda` : ''}</span>
+            </div>
+          </div>
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontSize:10, color:T.faint, textTransform:'uppercase', letterSpacing:'0.06em' }}>Orçamento</div>
+            <div style={{ fontSize:14, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>
+              {privacyMode ? '●●●' : new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(budget)}
+            </div>
+          </div>
+        </div>
+        <SpendingChart viewMonth={viewMonth} cards={mCards} bills={mBills} recurring={mRec} budget={budget}/>
+        <div style={{ marginTop:10 }}>
+          <ProgressBar value={mTotal} max={budget} color={budgetColor} height={4}/>
+        </div>
+      </SCard>
+
+      {/* Paid / Pending */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:12 }}>
+        <SCard style={{ padding:'13px 14px', borderLeft:`3px solid ${T.green}` }}>
+          <div style={{ fontSize:10, color:T.green, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:4 }}>Pago</div>
+          <div style={{ fontSize:18, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(mPaid)}</div>
+        </SCard>
+        <SCard style={{ padding:'13px 14px', borderLeft:`3px solid ${T.amber}` }}>
+          <div style={{ fontSize:10, color:T.amber, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:4 }}>Pendente</div>
+          <div style={{ fontSize:18, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(mPending)}</div>
+        </SCard>
+      </div>
+
+      {/* Category tiles */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:20 }}>
+        {[
+          {label:'Cartões',    value:mCardTotal, icon:'card',     nav:'cards',  color:T.blue   },
+          {label:'Contas',     value:mBillTotal, icon:'home',     nav:'fixed',  color:T.amber  },
+          {label:'Serviços',   value:mRecTotal,  icon:'calendar', nav:'fixed',  color:'#7C3AED'},
+        ].map(item=>(
+          <SCard key={item.label} hoverable onClick={()=>onNavigate(item.nav)} style={{ padding:'12px 10px' }}>
+            <div style={{ marginBottom:8 }}><Icon name={item.icon} size={16} color={item.color}/></div>
+            <div style={{ fontSize:14, fontWeight:700, color:T.navy, letterSpacing:'-0.01em', marginBottom:1, fontVariantNumeric:'tabular-nums' }}>{fmt(item.value)}</div>
+            <div style={{ fontSize:10, color:T.muted, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>{item.label}</div>
+          </SCard>
+        ))}
+      </div>
+
+      {/* Due soon highlight (current month only) */}
+      {dueSoon.length>0 && (
+        <>
+          <SectionLabel>Vencendo em breve</SectionLabel>
+          <SCard style={{ marginBottom:16, overflow:'hidden', border:`1px solid ${T.amber}40`, background:'#FFFBEB' }}>
+            {dueSoon.map((d,i)=>{
+              const tc={bill:T.amber,rec:'#7C3AED',card:T.blue}[d.type];
+              return (
+                <div key={d.id}>
+                  {i>0 && <Divider/>}
+                  <div style={{ display:'flex', alignItems:'center', padding:'12px 16px', gap:10 }}>
+                    <div style={{ flexShrink:0, width:34, height:34, borderRadius:9, background:tc+'18', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                      <span style={{ fontSize:13, fontWeight:700, color:tc, lineHeight:1 }}>{d.day}</span>
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:14, fontWeight:600, color:T.navy }}>{d.name}</div>
+                      <StatusBadge status={d.status}/>
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <span style={{ fontSize:15, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(d.amount)}</span>
+                      {d.type!=='card' && (
+                        <ActionBtn onClick={()=>{ d.type==='bill'?markBillPaid(d.id):markRecurringPaid(d.id); }} color={T.green}>Pagar</ActionBtn>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </SCard>
+        </>
+      )}
+
+      {/* All dues with filter */}
+      <SectionLabel>Vencimentos de {MONTH_NAMES_PT[vm]}</SectionLabel>
+      <FilterTabs options={dueFilterOptions} active={dueFilter} onChange={setDueFilter}/>
+      <SCard style={{ marginBottom:28, overflow:'hidden' }}>
+        {filteredDues.length===0
+          ? <EmptyState icon="✅" message="Nenhum vencimento nessa categoria"/>
+          : filteredDues.map((d,i)=>{
+            const tc={bill:T.amber,rec:'#7C3AED',card:T.blue}[d.type];
+            return (
+              <div key={d.id+d.type}>
+                {i>0 && <Divider/>}
+                <div style={{ display:'flex', alignItems:'center', padding:'13px 16px', gap:12 }}>
+                  <div style={{ flexShrink:0, width:38, height:38, borderRadius:10, background:tc+'12', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                    <span style={{ fontSize:14, fontWeight:700, color:tc, lineHeight:1 }}>{d.day}</span>
+                    <span style={{ fontSize:8, color:tc, opacity:0.7, textTransform:'uppercase' }}>{MONTH_SHORT[vm]}</span>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:14, fontWeight:600, color:T.navy, marginBottom:3 }}>{d.name}</div>
+                    <StatusBadge status={d.status}/>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+                    <span style={{ fontSize:15, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(d.amount)}</span>
+                    {d.type!=='card' && d.status!=='paid' && isCurrent && (
+                      <ActionBtn onClick={()=>{ d.type==='bill'?markBillPaid(d.id):markRecurringPaid(d.id); }} color={T.green}>Pagar</ActionBtn>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        }
+      </SCard>
+
+      {/* Settings sheet */}
+      <BottomSheet open={showSettings} onClose={()=>setShowSettings(false)} title="Configurações">
+        <FormField label="Orçamento mensal (R$)">
+          <Input type="number" value={settingBudget} onChange={e=>setSettingBudget(e.target.value)} placeholder={String(budget)}/>
+        </FormField>
+        <FormField label="Renda mensal (R$)">
+          <Input type="number" value={settingIncome} onChange={e=>setSettingIncome(e.target.value)} placeholder={income>0?String(income):'Ex: 8000'}/>
+        </FormField>
+        <PrimaryBtn onClick={saveSettings} style={{ marginBottom:12 }}>Salvar</PrimaryBtn>
+
+        <div style={{ height:1, background:T.border, margin:'16px 0' }}/>
+        <div style={{ fontSize:12, color:T.muted, fontWeight:600, letterSpacing:'0.04em', textTransform:'uppercase', marginBottom:12 }}>Backup de dados</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
+          <button onClick={exportData} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'12px', borderRadius:10, background:T.blueBg, color:T.blue, border:`1px solid ${T.blue}30`, cursor:'pointer', fontSize:13, fontWeight:600 }}>
+            <Icon name="download" size={15} color={T.blue}/> Exportar
+          </button>
+          <button onClick={()=>importRef.current?.click()} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'12px', borderRadius:10, background:T.cardSubtle, color:T.muted, border:`1px solid ${T.border}`, cursor:'pointer', fontSize:13, fontWeight:600 }}>
+            <Icon name="upload" size={15} color={T.muted}/> Importar
+          </button>
+        </div>
+        <input ref={importRef} type="file" accept=".json" style={{ display:'none' }} onChange={e=>{ if(e.target.files[0]) importData(e.target.files[0]); }}/>
+
+        <div style={{ height:1, background:T.border, margin:'4px 0 16px' }}/>
+        <button onClick={()=>{ if(confirm('Resetar todos os dados para o exemplo inicial?')) { resetData(); setShowSettings(false); } }} style={{ width:'100%', padding:'12px', borderRadius:10, background:T.redBg, color:T.red, border:`1px solid ${T.red}30`, cursor:'pointer', fontSize:13, fontWeight:600 }}>
+          Resetar dados de exemplo
+        </button>
+      </BottomSheet>
+    </div>
+  );
+};
+
+Object.assign(window,{ DashboardScreen });
+</script>
+
+<!-- ─────────────────────────────────────────────
+     4. CARDS SCREEN
+───────────────────────────────────────────── -->
+<script type="text/babel">
+const CreditCardsScreen = () => {
+  const { cards, fmt, addCard, addPurchase, editCard, editPurchase, deletePurchase } = useFinance();
+  const [activeCard,      setActiveCard]      = React.useState(cards[0]?.id);
+  const [showAddCard,     setShowAddCard]      = React.useState(false);
+  const [showEditCard,    setShowEditCard]     = React.useState(false);
+  const [showAddPurchase, setShowAddPurchase]  = React.useState(false);
+  const [editingPurchase, setEditingPurchase]  = React.useState(null);
+  const [filterRecurring, setFilterRecurring]  = React.useState(false);
+
+  const card = cards.find(c=>c.id===activeCard)||cards[0];
+  const used = card ? card.purchases.reduce((s,p)=>s+p.amount,0) : 0;
+  const usePct = card ? Math.min(100,(used/card.limit)*100) : 0;
+  const usePctColor = usePct>80?T.red:usePct>60?T.amber:T.blue;
+  const filtered = card ? (filterRecurring?card.purchases.filter(p=>p.recurring):card.purchases) : [];
+
+  const CATS = ['Alimentação','Transporte','Saúde','Streaming','Compras','Delivery','Lazer','Educação','Outros'];
+  const TODAY_STR = (()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+
+  const blankCard = { name:'', lastFour:'', color:'#1A1B2E', limit:'', dueDay:'', closeDay:'' };
+  const [newCard, setNewCard] = React.useState(blankCard);
+  const [editCardForm, setEditCardForm] = React.useState(blankCard);
+
+  const blankP = { desc:'', category:'Alimentação', amount:'', date:TODAY_STR, recurring:false };
+  const [newP,  setNewP]  = React.useState(blankP);
+  const [editP, setEditP] = React.useState(blankP);
+
+  const openEditCard = () => {
+    if (!card) return;
+    setEditCardForm({ name:card.name, lastFour:card.lastFour, color:card.color, limit:String(card.limit), dueDay:String(card.dueDay), closeDay:String(card.closeDay) });
+    setShowEditCard(true);
+  };
+
+  const openEditPurchase = p => {
+    setEditingPurchase(p);
+    setEditP({ desc:p.desc, category:p.category, amount:String(p.amount), date:p.date, recurring:p.recurring });
+  };
+
+  const submitCard = () => {
+    if (!newCard.name||!newCard.limit) return;
+    addCard({ ...newCard, limit:parseFloat(newCard.limit), dueDay:parseInt(newCard.dueDay)||10, closeDay:parseInt(newCard.closeDay)||3 });
+    setNewCard(blankCard); setShowAddCard(false);
+  };
+
+  const submitEditCard = () => {
+    editCard(card.id, { ...editCardForm, limit:parseFloat(editCardForm.limit)||card.limit, dueDay:parseInt(editCardForm.dueDay)||card.dueDay, closeDay:parseInt(editCardForm.closeDay)||card.closeDay });
+    setShowEditCard(false);
+  };
+
+  const submitPurchase = () => {
+    if (!newP.desc||!newP.amount) return;
+    addPurchase(activeCard, { ...newP, amount:parseFloat(newP.amount) });
+    setNewP(blankP); setShowAddPurchase(false);
+  };
+
+  const submitEditPurchase = () => {
+    if (!editP.desc||!editP.amount) return;
+    editPurchase(card.id, editingPurchase.id, { ...editP, amount:parseFloat(editP.amount) });
+    setEditingPurchase(null);
+  };
+
+  const CAT_COLORS = { Streaming:T.blue,Alimentação:'#166534',Delivery:T.amber,Saúde:'#7C3AED',Transporte:'#0891B2',Compras:'#BE185D',Lazer:'#059669',Educação:'#7C2D12',Outros:T.muted };
+  const colorOptions = ['#1A1B2E','#820AD1','#E05A00','#3D5AF1','#166534','#991B1B','#0891B2','#BE185D'];
+
+  const CardForm = ({ form, setForm, onSubmit, btnLabel, disabled }) => (
+    <>
+      <FormField label="Nome do cartão"><Input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="Ex: Nubank"/></FormField>
+      <FormField label="Últimos 4 dígitos"><Input value={form.lastFour} onChange={e=>setForm(p=>({...p,lastFour:e.target.value}))} placeholder="0000" maxLength={4}/></FormField>
+      <FormField label="Cor">
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {colorOptions.map(c=>(
+            <div key={c} onClick={()=>setForm(p=>({...p,color:c}))} style={{ width:32,height:32,borderRadius:'50%',background:c,cursor:'pointer',border:form.color===c?`3px solid ${T.navy}`:'3px solid transparent',boxShadow:form.color===c?`0 0 0 2px white,0 0 0 4px ${c}`:'none',transition:'all 150ms' }}/>
+          ))}
+        </div>
+      </FormField>
+      <FormField label="Limite (R$)"><Input type="number" value={form.limit} onChange={e=>setForm(p=>({...p,limit:e.target.value}))} placeholder="5000"/></FormField>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+        <FormField label="Vencimento (dia)"><Input type="number" value={form.dueDay} onChange={e=>setForm(p=>({...p,dueDay:e.target.value}))} placeholder="10"/></FormField>
+        <FormField label="Fechamento (dia)"><Input type="number" value={form.closeDay} onChange={e=>setForm(p=>({...p,closeDay:e.target.value}))} placeholder="3"/></FormField>
+      </div>
+      <PrimaryBtn onClick={onSubmit} disabled={disabled}>{btnLabel}</PrimaryBtn>
+    </>
+  );
+
+  const PurchaseForm = ({ form, setForm, onSubmit, btnLabel }) => (
+    <>
+      <FormField label="Descrição"><Input value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="Ex: Supermercado"/></FormField>
+      <FormField label="Categoria">
+        <Sel value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))}>
+          {CATS.map(c=><option key={c} value={c}>{c}</option>)}
+        </Sel>
+      </FormField>
+      <FormField label="Valor (R$)"><Input type="number" value={form.amount} onChange={e=>setForm(p=>({...p,amount:e.target.value}))} placeholder="0,00"/></FormField>
+      <FormField label="Data"><Input type="date" value={form.date} onChange={e=>setForm(p=>({...p,date:e.target.value}))}/></FormField>
+      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+        <input type="checkbox" id="recP" checked={form.recurring} onChange={e=>setForm(p=>({...p,recurring:e.target.checked}))}/>
+        <label htmlFor="recP" style={{ fontSize:14, color:T.navy }}>Lançamento recorrente</label>
+      </div>
+      <PrimaryBtn onClick={onSubmit} disabled={!form.desc||!form.amount}>{btnLabel}</PrimaryBtn>
+    </>
+  );
+
+  return (
+    <div style={{ padding:'20px 16px 0', overflowY:'auto', height:'100%' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+        <div style={{ fontSize:24, fontWeight:700, color:T.navy, letterSpacing:'-0.01em' }}>Cartões</div>
+        <button onClick={()=>setShowAddCard(true)} style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 16px', background:T.navy, color:'#fff', border:'none', borderRadius:9999, fontSize:11, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', cursor:'pointer' }}>
+          <Icon name="plus" size={13} color="#fff" strokeWidth={2.5}/> Novo
+        </button>
+      </div>
+
+      <div style={{ display:'flex', gap:8, marginBottom:16, overflowX:'auto', paddingBottom:2 }}>
+        {cards.map(c=>(
+          <button key={c.id} onClick={()=>setActiveCard(c.id)} style={{ flexShrink:0, padding:'6px 14px', borderRadius:9999, border:`1.5px solid ${activeCard===c.id?T.navy:T.border}`, background:activeCard===c.id?T.navy:T.card, color:activeCard===c.id?'#fff':T.muted, fontSize:12, fontWeight:700, cursor:'pointer', transition:'all 150ms' }}>
+            {c.name}
+          </button>
+        ))}
+      </div>
+
+      {card && <>
+        <CreditCardVisual card={card}/>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, margin:'12px 0' }}>
+          <SCard style={{ padding:14 }}>
+            <div style={{ fontSize:10, color:T.muted, fontWeight:700, letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:6 }}>Fatura atual</div>
+            <div style={{ fontSize:20, fontWeight:700, color:T.navy, marginBottom:8, fontVariantNumeric:'tabular-nums' }}>{fmt(used)}</div>
+            <ProgressBar value={used} max={card.limit} color={usePctColor} height={4}/>
+            <div style={{ fontSize:11, color:T.muted, marginTop:4 }}>{Math.round(usePct)}% de {fmt(card.limit)}</div>
+          </SCard>
+          <SCard style={{ padding:14 }}>
+            <div style={{ fontSize:10, color:T.muted, fontWeight:700, letterSpacing:'0.07em', textTransform:'uppercase', marginBottom:6 }}>Vencimento</div>
+            <div style={{ fontSize:20, fontWeight:700, color:T.navy, marginBottom:4 }}>Dia {card.dueDay}</div>
+            <div style={{ fontSize:12, color:T.muted }}>Fecha dia {card.closeDay}</div>
+          </SCard>
+        </div>
+        <button onClick={openEditCard} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:T.muted, background:'none', border:'none', cursor:'pointer', marginBottom:16, padding:'4px 0' }}>
+          <Icon name="pencil" size={13} color={T.muted}/> Editar dados do cartão
+        </button>
+
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+          <SectionLabel>{filtered.length} lançamentos</SectionLabel>
+          <div style={{ display:'flex', gap:6 }}>
+            <button onClick={()=>setFilterRecurring(f=>!f)} style={{ fontSize:10, padding:'4px 10px', borderRadius:9999, fontWeight:700, textTransform:'uppercase', background:filterRecurring?T.navy:'transparent', color:filterRecurring?'#fff':T.muted, border:`1.5px solid ${filterRecurring?T.navy:T.border}`, cursor:'pointer' }}>Recorrentes</button>
+            <button onClick={()=>setShowAddPurchase(true)} style={{ width:28,height:28,borderRadius:'50%',background:T.navy,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>
+              <Icon name="plus" size={13} color="#fff" strokeWidth={2.5}/>
+            </button>
+          </div>
+        </div>
+
+        <SCard style={{ marginBottom:28, overflow:'hidden' }}>
+          {filtered.length===0
+            ? <EmptyState icon="🧾" message="Nenhum lançamento"/>
+            : filtered.map((p,i)=>{
+              const cc=CAT_COLORS[p.category]||T.muted;
+              const ds=new Date(p.date+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+              return (
+                <div key={p.id}>
+                  {i>0 && <Divider/>}
+                  <div style={{ display:'flex', alignItems:'center', padding:'14px 16px', gap:12 }}>
+                    <div style={{ width:36,height:36,borderRadius:10,background:cc+'14',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0 }}>
+                      <CategoryDot color={cc} size={9}/>
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:14, fontWeight:600, color:T.navy, marginBottom:3 }}>{p.desc}</div>
+                      <div style={{ display:'flex', gap:5, alignItems:'center' }}>
+                        <span style={{ fontSize:10, color:cc, fontWeight:700, textTransform:'uppercase' }}>{p.category}</span>
+                        {p.recurring && <span style={{ fontSize:10, color:T.blue, fontWeight:700, textTransform:'uppercase' }}>· Recorrente</span>}
+                      </div>
+                    </div>
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                      <div style={{ fontSize:15, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(p.amount)}</div>
+                      <div style={{ fontSize:11, color:T.faint, marginTop:1 }}>{ds}</div>
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:4, flexShrink:0 }}>
+                      <button onClick={()=>openEditPurchase(p)} style={{ width:24,height:24,borderRadius:6,background:T.blueBg,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                        <Icon name="pencil" size={11} color={T.blue}/>
+                      </button>
+                      <button onClick={()=>deletePurchase(card.id,p.id)} style={{ width:24,height:24,borderRadius:6,background:T.redBg,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                        <Icon name="trash" size={11} color={T.red}/>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          }
+        </SCard>
+      </>}
+      {!card && <EmptyState icon="💳" message="Adicione seu primeiro cartão"/>}
+
+      <BottomSheet open={showAddCard} onClose={()=>setShowAddCard(false)} title="Novo cartão">
+        <CardForm form={newCard} setForm={setNewCard} onSubmit={submitCard} btnLabel="Adicionar cartão" disabled={!newCard.name||!newCard.limit}/>
+      </BottomSheet>
+      <BottomSheet open={showEditCard} onClose={()=>setShowEditCard(false)} title="Editar cartão">
+        <CardForm form={editCardForm} setForm={setEditCardForm} onSubmit={submitEditCard} btnLabel="Salvar alterações" disabled={!editCardForm.name}/>
+      </BottomSheet>
+      <BottomSheet open={showAddPurchase} onClose={()=>setShowAddPurchase(false)} title="Novo lançamento">
+        <PurchaseForm form={newP} setForm={setNewP} onSubmit={submitPurchase} btnLabel="Adicionar lançamento"/>
+      </BottomSheet>
+      <BottomSheet open={!!editingPurchase} onClose={()=>setEditingPurchase(null)} title="Editar lançamento">
+        <PurchaseForm form={editP} setForm={setEditP} onSubmit={submitEditPurchase} btnLabel="Salvar alterações"/>
+      </BottomSheet>
+    </div>
+  );
+};
+
+Object.assign(window,{ CreditCardsScreen });
+</script>
+
+<!-- ─────────────────────────────────────────────
+     5. DESPESAS FIXAS (Contas + Serviços merged)
+───────────────────────────────────────────── -->
+<script type="text/babel">
+const FixedExpensesScreen = () => {
+  const { bills, recurring, fmt, markBillPaid, markRecurringPaid,
+          deleteBill, deleteRecurring, addBill, addRecurring,
+          editBill, editRecurring, CURRENT_MONTH:CM, CURRENT_YEAR:CY } = useFinance();
+
+  const [viewMonth,    setViewMonth]    = React.useState({ month:CM, year:CY });
+  const [filter,       setFilter]       = React.useState('all');
+  const [showAdd,      setShowAdd]      = React.useState(false);
+  const [addType,      setAddType]      = React.useState('bill');
+  const [editingItem,  setEditingItem]  = React.useState(null);
+
+  const { month:vm, year:vy } = viewMonth;
+  const isCurrent = vm===CM && vy===CY;
+  const isPast    = vy<CY || (vy===CY && vm<CM);
+  const sim = s => isCurrent?s:isPast?'paid':'pending';
+
+  const allFixed = [
+    ...bills.map(b=>({ ...b, _type:'bill', _color:T.amber, status:sim(b.status) })),
+    ...recurring.map(r=>({ ...r, _type:'rec', _color:'#7C3AED', status:sim(r.status) })),
+  ].sort((a,b)=>a.dueDay-b.dueDay);
+
+  const displayed = filter==='all' ? allFixed : allFixed.filter(i=>i.status===filter);
+
+  const billTotal = bills.reduce((s,b)=>s+b.amount,0);
+  const recTotal  = recurring.reduce((s,r)=>s+r.amount,0);
+  const total     = billTotal+recTotal;
+  const paidAmt   = allFixed.filter(i=>i.status==='paid').reduce((s,i)=>s+i.amount,0);
+  const paidCount = allFixed.filter(i=>i.status==='paid').length;
+
+  const BILL_METHODS  = ['Débito automático','Boleto','Pix','Cartão de crédito','Transferência'];
+  const BILL_ICONS    = ['🏠','⚡','🌊','🔥','📱','📡','🚗','🏢','🏛','💧'];
+  const REC_CATS      = ['Saúde','Esporte','Educação','Pet','Beleza','Lazer','Serviço','Outros'];
+  const REC_FREQS     = ['Semanal','Quinzenal','Mensal','Anual'];
+  const REC_METHODS   = ['Pix','Transferência','Boleto','Dinheiro'];
+  const CAT_COLORS    = { Saúde:'#7C3AED',Esporte:T.blue,Educação:'#0891B2',Pet:T.amber,Beleza:'#BE185D',Lazer:T.green,Serviço:T.muted,Outros:T.muted };
+
+  const blankBill = { name:'', provider:'', amount:'', dueDay:'', method:'Débito automático', icon:'🏠' };
+  const blankRec  = { name:'', person:'', category:'Saúde', amount:'', frequency:'Mensal', dueDay:'', method:'Pix' };
+  const [billForm, setBillForm] = React.useState(blankBill);
+  const [recForm,  setRecForm]  = React.useState(blankRec);
+  const [editForm, setEditForm] = React.useState({});
+
+  const openEdit = item => {
+    setEditingItem(item);
+    if (item._type==='bill') setEditForm({ name:item.name, provider:item.provider||'', amount:String(item.amount), dueDay:String(item.dueDay), method:item.method, icon:item.icon });
+    else setEditForm({ name:item.name, person:item.person||'', category:item.category, amount:String(item.amount), frequency:item.frequency, dueDay:String(item.dueDay), method:item.method });
+  };
+
+  const submitAdd = () => {
+    if (addType==='bill') {
+      if (!billForm.name||!billForm.amount) return;
+      addBill({ ...billForm, amount:parseFloat(billForm.amount), dueDay:parseInt(billForm.dueDay)||10 });
+      setBillForm(blankBill);
+    } else {
+      if (!recForm.name||!recForm.amount) return;
+      addRecurring({ ...recForm, amount:parseFloat(recForm.amount), dueDay:parseInt(recForm.dueDay)||1 });
+      setRecForm(blankRec);
+    }
+    setShowAdd(false);
+  };
+
+  const submitEdit = () => {
+    if (!editingItem) return;
+    if (editingItem._type==='bill') {
+      editBill(editingItem.id, { ...editForm, amount:parseFloat(editForm.amount)||editingItem.amount, dueDay:parseInt(editForm.dueDay)||editingItem.dueDay });
+    } else {
+      editRecurring(editingItem.id, { ...editForm, amount:parseFloat(editForm.amount)||editingItem.amount, dueDay:parseInt(editForm.dueDay)||editingItem.dueDay });
+    }
+    setEditingItem(null);
+  };
+
+  const filterOptions = [
+    {value:'all',label:'Todos'},{value:'pending',label:'Pendente'},
+    {value:'paid',label:'Pago'},{value:'overdue',label:'Vencido'},
+  ];
+
+  return (
+    <div style={{ padding:'20px 16px 0', overflowY:'auto', height:'100%' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+        <div style={{ fontSize:24, fontWeight:700, color:T.navy, letterSpacing:'-0.01em' }}>Despesas Fixas</div>
+        <button onClick={()=>setShowAdd(true)} style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', background:T.blue, color:'#fff', border:'none', borderRadius:9999, fontSize:11, fontWeight:700, textTransform:'uppercase', cursor:'pointer' }}>
+          <Icon name="plus" size={13} color="#fff" strokeWidth={2.5}/> Adicionar
+        </button>
+      </div>
+
+      <MonthNav viewMonth={viewMonth} onChange={setViewMonth} style={{ marginBottom:14, justifyContent:'center' }}/>
+
+      {/* Summary */}
+      <SCard style={{ padding:'16px 18px', marginBottom:14 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
+          <div>
+            <div style={{ fontSize:10, color:T.muted, fontWeight:700, letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:4 }}>{MONTH_NAMES_PT[vm]} {vy}</div>
+            <div style={{ fontSize:26, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(total)}</div>
+          </div>
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontSize:10, color:T.muted, fontWeight:700, textTransform:'uppercase', marginBottom:4 }}>Pagas</div>
+            <div style={{ fontSize:20, fontWeight:700, color:T.green, fontVariantNumeric:'tabular-nums' }}>{paidCount}<span style={{ fontSize:14, color:T.muted }}>/{allFixed.length}</span></div>
+          </div>
+        </div>
+        <ProgressBar value={paidAmt} max={total||1} color={T.blue} height={4}/>
+      </SCard>
+
+      {/* Status mini-tiles */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginBottom:14 }}>
+        {[
+          {label:'Pagas',     count:allFixed.filter(i=>i.status==='paid').length,    color:T.green, bg:T.greenBg},
+          {label:'Pendentes', count:allFixed.filter(i=>i.status==='pending').length, color:T.amber, bg:T.amberBg},
+          {label:'Vencidas',  count:allFixed.filter(i=>i.status==='overdue').length, color:T.red,   bg:T.redBg  },
+        ].map(s=>(
+          <div key={s.label} style={{ background:s.bg, borderRadius:10, padding:'8px 10px', textAlign:'center' }}>
+            <div style={{ fontSize:20, fontWeight:700, color:s.color, fontVariantNumeric:'tabular-nums' }}>{s.count}</div>
+            <div style={{ fontSize:9, color:s.color, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Type breakdown */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
+        <SCard style={{ padding:'12px 14px', borderLeft:`3px solid ${T.amber}` }}>
+          <div style={{ fontSize:10, color:T.amber, fontWeight:700, textTransform:'uppercase', marginBottom:3 }}>🏠 Contas</div>
+          <div style={{ fontSize:16, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(billTotal)}</div>
+        </SCard>
+        <SCard style={{ padding:'12px 14px', borderLeft:`3px solid ${'#7C3AED'}` }}>
+          <div style={{ fontSize:10, color:'#7C3AED', fontWeight:700, textTransform:'uppercase', marginBottom:3 }}>⭐ Serviços</div>
+          <div style={{ fontSize:16, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(recTotal)}</div>
+        </SCard>
+      </div>
+
+      <FilterTabs options={filterOptions} active={filter} onChange={setFilter}/>
+
+      <SCard style={{ marginBottom:28, overflow:'hidden' }}>
+        {displayed.length===0
+          ? <EmptyState icon="✅" message="Nenhum item nessa categoria"/>
+          : displayed.map((item,i)=>{
+            const isBill = item._type==='bill';
+            const cc = isBill ? T.amber : (CAT_COLORS[item.category]||T.muted);
+            return (
+              <div key={item.id}>
+                {i>0 && <Divider/>}
+                <div style={{ display:'flex', alignItems:'center', padding:'14px 16px', gap:12 }}>
+                  {/* Avatar */}
+                  {isBill
+                    ? <div style={{ width:42,height:42,borderRadius:12,flexShrink:0,fontSize:20,display:'flex',alignItems:'center',justifyContent:'center',background:T.cardSubtle }}>{item.icon}</div>
+                    : <div style={{ width:42,height:42,borderRadius:'50%',flexShrink:0,background:cc+'16',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                        <span style={{ fontSize:13,fontWeight:800,color:cc }}>{item.name.slice(0,2).toUpperCase()}</span>
+                      </div>
+                  }
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+                      <span style={{ fontSize:15, fontWeight:600, color:T.navy }}>{item.name}</span>
+                      {!isBill && <span style={{ fontSize:9, background:cc+'18', color:cc, borderRadius:4, padding:'1px 5px', fontWeight:700, textTransform:'uppercase' }}>{item.category}</span>}
+                    </div>
+                    <div style={{ fontSize:12, color:T.faint, marginBottom:4 }}>{isBill?(item.provider||'—'):item.person}</div>
+                    <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                      <StatusBadge status={item.status}/>
+                      <span style={{ fontSize:10, color:T.faint }}>dia {item.dueDay} · {item.method}</span>
+                      {!isBill && <span style={{ fontSize:9, color:T.faint, textTransform:'uppercase' }}>{item.frequency}</span>}
+                    </div>
+                  </div>
+                  <div style={{ textAlign:'right', flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:5 }}>
+                    <span style={{ fontSize:16, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(item.amount)}</span>
+                    <div style={{ display:'flex', gap:4 }}>
+                      {item.status!=='paid' && isCurrent && (
+                        <ActionBtn onClick={()=>isBill?markBillPaid(item.id):markRecurringPaid(item.id)} color={T.green}>Pagar</ActionBtn>
+                      )}
+                      <button onClick={()=>openEdit(item)} style={{ width:24,height:24,borderRadius:6,background:T.blueBg,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                        <Icon name="pencil" size={11} color={T.blue}/>
+                      </button>
+                      <button onClick={()=>isBill?deleteBill(item.id):deleteRecurring(item.id)} style={{ width:24,height:24,borderRadius:6,background:T.redBg,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>
+                        <Icon name="trash" size={11} color={T.red}/>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        }
+      </SCard>
+
+      {/* Add sheet */}
+      <BottomSheet open={showAdd} onClose={()=>setShowAdd(false)} title="Nova despesa fixa">
+        {/* Type toggle */}
+        <div style={{ display:'flex', background:T.border, borderRadius:12, padding:3, marginBottom:18 }}>
+          {[{v:'bill',l:'🏠 Conta de Casa'},{v:'service',l:'⭐ Serviço'}].map(t=>(
+            <button key={t.v} onClick={()=>setAddType(t.v==='service'?'rec':t.v)} style={{ flex:1, padding:'9px 0', fontSize:13, fontWeight:700, background:addType===(t.v==='service'?'rec':t.v)?T.card:'transparent', color:addType===(t.v==='service'?'rec':t.v)?T.navy:T.muted, border:'none', borderRadius:10, cursor:'pointer', boxShadow:addType===(t.v==='service'?'rec':t.v)?T.shadow:'none', transition:'all 150ms' }}>{t.l}</button>
+          ))}
+        </div>
+
+        {addType==='bill' ? (
+          <>
+            <FormField label="Ícone">
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {BILL_ICONS.map(ic=>(
+                  <div key={ic} onClick={()=>setBillForm(p=>({...p,icon:ic}))} style={{ width:36,height:36,borderRadius:8,fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',background:billForm.icon===ic?T.blue:T.cardSubtle,border:`2px solid ${billForm.icon===ic?T.blue:'transparent'}`,filter:billForm.icon===ic?'brightness(10)':'none',transition:'all 150ms' }}>{ic}</div>
+                ))}
+              </div>
+            </FormField>
+            <FormField label="Nome"><Input value={billForm.name} onChange={e=>setBillForm(p=>({...p,name:e.target.value}))} placeholder="Ex: Energia"/></FormField>
+            <FormField label="Fornecedor"><Input value={billForm.provider} onChange={e=>setBillForm(p=>({...p,provider:e.target.value}))} placeholder="Ex: Enel"/></FormField>
+            <FormField label="Valor (R$)"><Input type="number" value={billForm.amount} onChange={e=>setBillForm(p=>({...p,amount:e.target.value}))} placeholder="0,00"/></FormField>
+            <FormField label="Dia de vencimento"><Input type="number" value={billForm.dueDay} onChange={e=>setBillForm(p=>({...p,dueDay:e.target.value}))} placeholder="10"/></FormField>
+            <FormField label="Pagamento"><Sel value={billForm.method} onChange={e=>setBillForm(p=>({...p,method:e.target.value}))}>{BILL_METHODS.map(m=><option key={m} value={m}>{m}</option>)}</Sel></FormField>
+            <PrimaryBtn onClick={submitAdd} disabled={!billForm.name||!billForm.amount}>Adicionar conta</PrimaryBtn>
+          </>
+        ) : (
+          <>
+            <FormField label="Serviço"><Input value={recForm.name} onChange={e=>setRecForm(p=>({...p,name:e.target.value}))} placeholder="Ex: Personal Trainer"/></FormField>
+            <FormField label="Profissional / Empresa"><Input value={recForm.person} onChange={e=>setRecForm(p=>({...p,person:e.target.value}))} placeholder="Ex: João Silva"/></FormField>
+            <FormField label="Categoria"><Sel value={recForm.category} onChange={e=>setRecForm(p=>({...p,category:e.target.value}))}>{REC_CATS.map(c=><option key={c} value={c}>{c}</option>)}</Sel></FormField>
+            <FormField label="Valor (R$)"><Input type="number" value={recForm.amount} onChange={e=>setRecForm(p=>({...p,amount:e.target.value}))} placeholder="0,00"/></FormField>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+              <FormField label="Frequência"><Sel value={recForm.frequency} onChange={e=>setRecForm(p=>({...p,frequency:e.target.value}))}>{REC_FREQS.map(f=><option key={f} value={f}>{f}</option>)}</Sel></FormField>
+              <FormField label="Dia venc."><Input type="number" value={recForm.dueDay} onChange={e=>setRecForm(p=>({...p,dueDay:e.target.value}))} placeholder="1"/></FormField>
+            </div>
+            <FormField label="Pagamento"><Sel value={recForm.method} onChange={e=>setRecForm(p=>({...p,method:e.target.value}))}>{REC_METHODS.map(m=><option key={m} value={m}>{m}</option>)}</Sel></FormField>
+            <PrimaryBtn onClick={submitAdd} disabled={!recForm.name||!recForm.amount}>Adicionar serviço</PrimaryBtn>
+          </>
+        )}
+      </BottomSheet>
+
+      {/* Edit sheet */}
+      <BottomSheet open={!!editingItem} onClose={()=>setEditingItem(null)} title={editingItem?`Editar: ${editingItem.name}`:''}>
+        {editingItem && editingItem._type==='bill' ? (
+          <>
+            <FormField label="Nome"><Input value={editForm.name||''} onChange={e=>setEditForm(p=>({...p,name:e.target.value}))} placeholder="Nome da conta"/></FormField>
+            <FormField label="Fornecedor"><Input value={editForm.provider||''} onChange={e=>setEditForm(p=>({...p,provider:e.target.value}))} placeholder="Fornecedor"/></FormField>
+            <FormField label="Valor (R$)"><Input type="number" value={editForm.amount||''} onChange={e=>setEditForm(p=>({...p,amount:e.target.value}))} placeholder="0,00"/></FormField>
+            <FormField label="Dia de vencimento"><Input type="number" value={editForm.dueDay||''} onChange={e=>setEditForm(p=>({...p,dueDay:e.target.value}))} placeholder="10"/></FormField>
+            <FormField label="Pagamento"><Sel value={editForm.method||'Boleto'} onChange={e=>setEditForm(p=>({...p,method:e.target.value}))}>{BILL_METHODS.map(m=><option key={m} value={m}>{m}</option>)}</Sel></FormField>
+            <PrimaryBtn onClick={submitEdit} disabled={!editForm.name}>Salvar alterações</PrimaryBtn>
+          </>
+        ) : editingItem ? (
+          <>
+            <FormField label="Serviço"><Input value={editForm.name||''} onChange={e=>setEditForm(p=>({...p,name:e.target.value}))} placeholder="Nome do serviço"/></FormField>
+            <FormField label="Profissional"><Input value={editForm.person||''} onChange={e=>setEditForm(p=>({...p,person:e.target.value}))} placeholder="Nome"/></FormField>
+            <FormField label="Categoria"><Sel value={editForm.category||'Saúde'} onChange={e=>setEditForm(p=>({...p,category:e.target.value}))}>{REC_CATS.map(c=><option key={c} value={c}>{c}</option>)}</Sel></FormField>
+            <FormField label="Valor (R$)"><Input type="number" value={editForm.amount||''} onChange={e=>setEditForm(p=>({...p,amount:e.target.value}))} placeholder="0,00"/></FormField>
+            <FormField label="Dia venc."><Input type="number" value={editForm.dueDay||''} onChange={e=>setEditForm(p=>({...p,dueDay:e.target.value}))} placeholder="1"/></FormField>
+            <FormField label="Pagamento"><Sel value={editForm.method||'Pix'} onChange={e=>setEditForm(p=>({...p,method:e.target.value}))}>{REC_METHODS.map(m=><option key={m} value={m}>{m}</option>)}</Sel></FormField>
+            <PrimaryBtn onClick={submitEdit} disabled={!editForm.name}>Salvar alterações</PrimaryBtn>
+          </>
+        ) : null}
+      </BottomSheet>
+    </div>
+  );
+};
+
+Object.assign(window,{ FixedExpensesScreen });
+</script>
+
+<!-- ─────────────────────────────────────────────
+     6. REPORTS SCREEN
+───────────────────────────────────────────── -->
+<script type="text/babel">
+const ReportsScreen = () => {
+  const { cardTotal, billTotal, recurringTotal, totalExpenses, fmt, paidTotal, pendingTotal,
+          categoryBreakdown, cards, bills, recurring, CURRENT_MONTH:CM, CURRENT_YEAR:CY } = useFinance();
+
+  const [tab,           setTab]           = React.useState('overview');
+  const [selectedYear,  setSelectedYear]  = React.useState(CY);
+  const [viewMonth,     setViewMonth]     = React.useState({ month:CM, year:CY });
+
+  const YEARS = [CY-2, CY-1, CY];
+  const { month:vm, year:vy } = viewMonth;
+  const isCurrentPeriod = vy===CY && vm===CM;
+  const isPast = vy<CY || (vy===CY && vm<CM);
+
+  const factor = isCurrentPeriod ? 1 : isPast ? 0.92 : 1;
+  const pCardTotal = isCurrentPeriod ? cardTotal : cardTotal * factor;
+  const pBillTotal = billTotal;
+  const pRecTotal  = recurringTotal;
+  const pTotal     = pCardTotal + pBillTotal + pRecTotal;
+  const pPaid      = isCurrentPeriod ? paidTotal    : pTotal * (isPast ? 1 : 0.4);
+  const pPending   = pTotal - pPaid;
+
+  const breakdown = categoryBreakdown();
+  const maxCat = breakdown[0]?.amount||1;
+
+  const DonutChart = ({ segments, size=120 }) => {
+    const cx=size/2, cy=size/2, r=size*0.34, stroke=size*0.14;
+    let cum=0;
+    const total=segments.reduce((s,g)=>s+g.value,0);
+    if (!total) return <div style={{ width:size,height:size,borderRadius:'50%',background:T.border }}/>;
+    const arcs=segments.map((seg,i)=>{
+      const pct=seg.value/total, a1=cum*2*Math.PI-Math.PI/2;
+      cum+=pct;
+      const a2=cum*2*Math.PI-Math.PI/2;
+      const x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+      return <path key={i} d={`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${pct>0.5?1:0} 1 ${x2},${y2} Z`} fill={seg.color} opacity={0.88}/>;
+    });
+    return (<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>{arcs}<circle cx={cx} cy={cy} r={r-stroke} fill={T.card}/></svg>);
+  };
+
+  const mainSegs = [
+    {label:'Cartões',    value:pCardTotal, color:T.blue   },
+    {label:'Contas',     value:pBillTotal, color:T.amber  },
+    {label:'Serviços',   value:pRecTotal,  color:'#7C3AED'},
+  ];
+
+  const CalView = () => {
+    const allDues = [
+      ...bills.map(b=>({name:b.name,day:b.dueDay,status:b.status,color:T.amber,amount:b.amount})),
+      ...recurring.map(r=>({name:r.name,day:r.dueDay,status:r.status,color:'#7C3AED',amount:r.amount})),
+      ...cards.map(c=>({name:`Fatura ${c.name}`,day:c.dueDay,status:'pending',color:T.blue,amount:c.purchases.reduce((s,p)=>s+p.amount,0)})),
+    ].sort((a,b)=>a.day-b.day);
+    const grouped = allDues.reduce((acc,item)=>{ if(!acc[item.day]) acc[item.day]=[]; acc[item.day].push(item); return acc; },{});
+    return (
+      <div>
+        {Object.entries(grouped).map(([day,items])=>(
+          <div key={day} style={{ display:'flex', gap:14, marginBottom:14 }}>
+            <div style={{ width:32, flexShrink:0, paddingTop:2 }}>
+              <div style={{ fontSize:18, fontWeight:700, color:T.navy, lineHeight:1, fontVariantNumeric:'tabular-nums' }}>{day}</div>
+              <div style={{ fontSize:9, color:T.faint, textTransform:'uppercase', marginTop:1 }}>{MONTH_SHORT[vm]}</div>
+            </div>
+            <div style={{ flex:1, display:'flex', flexDirection:'column', gap:5 }}>
+              {items.map((item,i)=>(
+                <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 12px', borderRadius:9, background:item.color+'0D', borderLeft:`3px solid ${item.color}` }}>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:600, color:T.navy, marginBottom:2 }}>{item.name}</div>
+                    <StatusBadge status={item.status}/>
+                  </div>
+                  <div style={{ fontSize:14, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(item.amount)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ padding:'20px 16px 0', overflowY:'auto', height:'100%' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+        <div style={{ fontSize:24, fontWeight:700, color:T.navy, letterSpacing:'-0.01em' }}>Relatórios</div>
+      </div>
+
+      <MonthNav viewMonth={viewMonth} onChange={setViewMonth} style={{ marginBottom:14, justifyContent:'center' }}/>
+
+      {/* Tab toggle */}
+      <div style={{ display:'flex', background:T.border, borderRadius:12, padding:3, marginBottom:16 }}>
+        {[{value:'overview',label:'Geral'},{value:'categories',label:'Categorias'},{value:'calendar',label:'Calendário'}].map(t=>(
+          <button key={t.value} onClick={()=>setTab(t.value)} style={{ flex:1, padding:'8px 0', fontSize:12, fontWeight:700, background:tab===t.value?T.card:'transparent', color:tab===t.value?T.navy:T.muted, border:'none', borderRadius:10, cursor:'pointer', boxShadow:tab===t.value?T.shadow:'none', transition:'all 150ms' }}>{t.label}</button>
+        ))}
+      </div>
+
+      {tab==='overview' && <>
+        <SCard style={{ padding:20, marginBottom:12 }}>
+          <SectionLabel>Distribuição · {MONTH_NAMES_PT[vm]} {vy}</SectionLabel>
+          <div style={{ display:'flex', alignItems:'center', gap:20, marginTop:4 }}>
+            <div style={{ flexShrink:0 }}><DonutChart segments={mainSegs} size={120}/></div>
+            <div style={{ flex:1 }}>
+              {mainSegs.map(s=>(
+                <div key={s.label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <div style={{ width:8,height:8,borderRadius:2,background:s.color }}/>
+                    <span style={{ fontSize:13, color:T.navy, fontWeight:500 }}>{s.label}</span>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(s.value)}</div>
+                    <div style={{ fontSize:10, color:T.faint }}>{pTotal?Math.round((s.value/pTotal)*100):0}%</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </SCard>
+
+        <SCard style={{ padding:'16px 18px', marginBottom:12 }}>
+          <SectionLabel>Status de pagamento</SectionLabel>
+          {[{label:'Pago',value:pPaid,color:T.green},{label:'Pendente',value:pPending,color:T.amber}].map((item,i)=>(
+            <div key={i} style={{ marginBottom:i===0?12:0 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                <span style={{ fontSize:12, color:T.muted, fontWeight:500 }}>{item.label}</span>
+                <span style={{ fontSize:13, fontWeight:700, color:item.color, fontVariantNumeric:'tabular-nums' }}>{fmt(item.value)}</span>
+              </div>
+              <ProgressBar value={item.value} max={pTotal||1} color={item.color} height={5}/>
+            </div>
+          ))}
+        </SCard>
+
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:28 }}>
+          {[
+            {label:'Total do mês',    value:pTotal,    color:T.navy  },
+            {label:'Maior categoria', value:breakdown[0]?.amount||0, color:T.red, sub:breakdown[0]?.name||'—'},
+            {label:'Cartões',         value:pCardTotal, color:T.blue  },
+            {label:'Fixo mensal',     value:pBillTotal+pRecTotal, color:'#7C3AED'},
+          ].map(tile=>(
+            <SCard key={tile.label} style={{ padding:14 }}>
+              <div style={{ fontSize:10, color:T.muted, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase', marginBottom:5 }}>{tile.label}</div>
+              <div style={{ fontSize:18, fontWeight:700, color:tile.color, fontVariantNumeric:'tabular-nums' }}>{fmt(tile.value)}</div>
+              {tile.sub && <div style={{ fontSize:11, color:T.faint, marginTop:3 }}>{tile.sub}</div>}
+            </SCard>
+          ))}
+        </div>
+      </>}
+
+      {tab==='categories' && (
+        <SCard style={{ padding:18, marginBottom:28 }}>
+          <SectionLabel>Por categoria · {MONTH_NAMES_PT[vm]}</SectionLabel>
+          {breakdown.map(cat=>(
+            <div key={cat.name} style={{ marginBottom:16 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ width:7,height:7,borderRadius:'50%',background:cat.color }}/>
+                  <span style={{ fontSize:13, fontWeight:500, color:T.navy }}>{cat.name}</span>
+                </div>
+                <div style={{ textAlign:'right' }}>
+                  <span style={{ fontSize:14, fontWeight:700, color:T.navy, fontVariantNumeric:'tabular-nums' }}>{fmt(cat.amount)}</span>
+                  <span style={{ fontSize:10, color:T.faint, marginLeft:6 }}>{pTotal?Math.round((cat.amount/pTotal)*100):0}%</span>
+                </div>
+              </div>
+              <ProgressBar value={cat.amount} max={maxCat} color={cat.color} height={4}/>
+            </div>
+          ))}
+        </SCard>
+      )}
+
+      {tab==='calendar' && (
+        <SCard style={{ padding:18, marginBottom:28 }}>
+          <SectionLabel>Vencimentos · {MONTH_NAMES_PT[vm]}</SectionLabel>
+          <div style={{ marginTop:8 }}><CalView/></div>
+        </SCard>
+      )}
+    </div>
+  );
+};
+
+Object.assign(window,{ ReportsScreen });
+</script>
+
+<!-- ─────────────────────────────────────────────
+     7. APP SHELL
+───────────────────────────────────────────── -->
+<script type="text/babel">
+const NAV_TABS = [
+  { id:'dashboard', label:'Início',    icon:'dashboard' },
+  { id:'cards',     label:'Cartões',   icon:'card'      },
+  { id:'fixed',     label:'Contas',    icon:'calendar'  },
+  { id:'reports',   label:'Relatórios',icon:'chart'     },
+];
+
+const BottomNav = ({ active, onChange }) => (
+  <nav style={{ display:'flex', background:'#FFFFFF', borderTop:`1px solid ${T.border}`, paddingBottom:'env(safe-area-inset-bottom,4px)', flexShrink:0 }}>
+    {NAV_TABS.map(tab=>{
+      const on=active===tab.id;
+      return (
+        <button key={tab.id} onClick={()=>onChange(tab.id)} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', paddingTop:10, paddingBottom:6, gap:3, background:'none', border:'none', cursor:'pointer' }}>
+          <div style={{ width:38,height:28,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',background:on?'#EEF2FF':'transparent',transition:'background 150ms' }}>
+            <Icon name={tab.icon} size={19} color={on?'#4F46E5':'#94A3B8'} strokeWidth={on?2.1:1.6}/>
+          </div>
+          <span style={{ fontSize:10, fontWeight:on?600:400, color:on?'#4F46E5':'#94A3B8', letterSpacing:'0.01em' }}>{tab.label}</span>
+        </button>
+      );
+    })}
+  </nav>
+);
+
+const ToastBar = () => {
+  const { toast, dismissToast } = useFinance();
+  if (!toast) return null;
+  return (
+    <div style={{ position:'absolute', bottom:76, left:12, right:12, zIndex:300, background:T.navy, borderRadius:12, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', boxShadow:'0 4px 20px rgba(0,0,0,0.3)', animation:'slideUpFast 200ms ease' }}>
+      <span style={{ fontSize:13, color:'#fff' }}>{toast.message}</span>
+      <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+        {toast.undoFn && (
+          <button onClick={()=>{ toast.undoFn(); dismissToast(); }} style={{ fontSize:12, fontWeight:700, color:'#A5B4FC', background:'none', border:'none', cursor:'pointer', letterSpacing:'0.04em' }}>DESFAZER</button>
+        )}
+        <button onClick={dismissToast} style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center' }}>
+          <Icon name="x" size={14} color="rgba(255,255,255,0.5)" strokeWidth={2}/>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const SCREENS = { dashboard:DashboardScreen, cards:CreditCardsScreen, fixed:FixedExpensesScreen, reports:ReportsScreen };
+
+const AppShell = () => {
+  const [screen, setScreen] = React.useState('dashboard');
+  const navigate = id => { if(id!==screen) setScreen(id); };
+  const Screen = SCREENS[screen];
+  return (
+    <div style={{ display:'flex', flexDirection:'column', width:'100%', maxWidth:430, height:'100%', background:'#F8FAFC', overflow:'hidden', boxShadow:'0 0 60px rgba(15,23,42,0.18)', position:'relative' }}>
+      <div key={screen} className="screen-fade" style={{ flex:1, overflowY:'auto', overflowX:'hidden', minHeight:0 }}>
+        <Screen onNavigate={navigate}/>
+      </div>
+      <ToastBar/>
+      <BottomNav active={screen} onChange={navigate}/>
+    </div>
+  );
+};
+
+const App = () => (
+  <FinanceProvider>
+    <div style={{ height:'100dvh', display:'flex', alignItems:'center', justifyContent:'center', background:'#CBD5E1' }}>
+      <AppShell/>
+    </div>
+  </FinanceProvider>
+);
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
